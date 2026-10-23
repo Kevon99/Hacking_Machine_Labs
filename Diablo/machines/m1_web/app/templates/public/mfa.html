@@ -1,0 +1,32 @@
+{% extends "public/base.html" %}
+
+{% block title %}Verificación MFA | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section auth-public">
+    <div class="auth-layout">
+        <div class="card auth-card">
+            <div class="eyebrow">Verificación en dos pasos</div>
+            <h1>Introduce tu código</h1>
+            <p class="muted">Enviamos un código de 6 dígitos al dispositivo registrado en tu cuenta.</p>
+
+            <form method="post" action="{{ url_for('mfa') }}" class="stack">
+                <label>
+                    Código de verificación
+                    <input type="text" name="code" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" required>
+                </label>
+                <button type="submit" class="primary">Verificar código</button>
+            </form>
+
+            <p class="form-note"><a href="{{ url_for('forgot_password') }}">Volver a recuperación de acceso</a></p>
+        </div>
+
+        <div class="card side-card">
+            <div class="eyebrow">Acceso seguro</div>
+            <h2>¿No recibiste el código?</h2>
+            <p class="muted">Revisa el dispositivo registrado o solicita asistencia al equipo de soporte.</p>
+            <a class="button button-secondary" href="{{ url_for('forgot_password') }}">Solicitar asistencia</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

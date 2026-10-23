@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Solicitud bloqueada | Trickshot Edge</title>
+    <link rel="stylesheet" href="{{ sites.cdn }}/style.css">
+</head>
+<body class="public-body">
+    <main class="container">
+        <section class="card narrow-card waf-card">
+            <div class="eyebrow">Trickshot Edge · Seguridad</div>
+            <h1>La solicitud fue bloqueada</h1>
+            <p class="muted">{{ reason }}</p>
+            <div class="waf-details">
+                <div><span>Estado</span><strong class="mono">{{ status }}</strong></div>
+                <div><span>Reintentar en</span><strong class="mono">{{ retry_after }} s</strong></div>
+                <div><span>Referencia</span><strong class="mono">WAF-{{ status }}-{{ retry_after }}</strong></div>
+            </div>
+            <p class="form-note muted">Si cree que se trata de un error, contacte con el equipo de soporte e incluya la referencia anterior.</p>
+            <div class="hero-actions">
+                <a class="button" href="{{ sites.support }}/">Contactar con soporte</a>
+                <a class="button button-secondary" href="{{ sites.main }}/">Volver al inicio</a>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

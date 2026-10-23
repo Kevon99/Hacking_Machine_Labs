@@ -1,0 +1,33 @@
+{% extends "public/base.html" %}
+
+{% block title %}Preguntas de seguridad | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section auth-public">
+    <div class="auth-layout">
+        <div class="card auth-card">
+            <div class="eyebrow">Recuperación de acceso</div>
+            <h1>Preguntas de seguridad</h1>
+            <p class="muted">Responde las preguntas asociadas a tu cuenta.</p>
+
+            <form method="post" action="{{ url_for('recovery_questions') }}" class="stack">
+                {% for question in questions %}
+                <label>
+                    {{ question }}
+                    <input type="text" name="answer{{ loop.index }}" autocomplete="off" required>
+                </label>
+                {% endfor %}
+                <button type="submit" class="primary">Verificar respuestas</button>
+            </form>
+
+            <p class="form-note"><a href="{{ url_for('forgot_password') }}">Volver a recuperación de acceso</a></p>
+        </div>
+
+        <div class="card side-card">
+            <div class="eyebrow">Soporte de acceso</div>
+            <h2>Verificación adicional</h2>
+            <p class="muted">Si no recuerdas las respuestas, el equipo de soporte puede validar tu identidad por otro canal.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

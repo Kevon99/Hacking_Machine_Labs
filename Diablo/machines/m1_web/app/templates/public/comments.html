@@ -1,0 +1,53 @@
+{% extends "public/base.html" %}
+
+{% block title %}Comentarios | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">Comunidad</div>
+            <h1>Panel de comentarios</h1>
+            <p class="muted">Comparta su experiencia con los servicios de Trickshot. Los comentarios se publican tras una revisión básica.</p>
+        </div>
+        <span class="status-dot">{{ comments|length }} publicados</span>
+    </div>
+
+    <div class="comments-layout">
+        <section class="card">
+            <h2>Nuevo comentario</h2>
+            <form method="post" action="{{ url_for('comments') }}" class="stack">
+                <label>
+                    Nombre
+                    <input type="text" name="author" minlength="2" maxlength="80" required>
+                </label>
+                <label>
+                    Correo electrónico (opcional)
+                    <input type="email" name="email" maxlength="160">
+                </label>
+                <label>
+                    Comentario
+                    <textarea name="body" rows="5" minlength="3" maxlength="2000" required></textarea>
+                </label>
+                <button type="submit" class="primary">Publicar comentario</button>
+            </form>
+        </section>
+
+        <section class="comment-list">
+            {% for comment in comments %}
+            <article class="card comment-card">
+                <div class="comment-head">
+                    <strong>{{ comment.author }}</strong>
+                    <span class="muted mono">{{ comment.created_at }}</span>
+                </div>
+                <p>{{ comment.body }}</p>
+            </article>
+            {% else %}
+            <article class="card">
+                <p class="muted">Todavía no hay comentarios publicados.</p>
+            </article>
+            {% endfor %}
+        </section>
+    </div>
+</section>
+{% endblock %}

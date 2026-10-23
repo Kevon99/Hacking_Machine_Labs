@@ -1,0 +1,31 @@
+{% extends "public/base.html" %}
+
+{% block title %}Área restringida | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="eyebrow">Error {{ code }}</div>
+    <h1>{% if code == 403 %}Área restringida{% else %}Recurso no disponible{% endif %}</h1>
+    <p class="muted">{{ message }}</p>
+
+    {% if code == 403 %}
+    <div class="card narrow-card">
+        <h2>Autenticación interna</h2>
+        <p class="muted">Este panel está reservado para personal de operaciones. El acceso requiere encontrarse en la red corporativa.</p>
+        <form method="post" action="{{ request.path }}" class="stack">
+            <label>
+                Usuario corporativo
+                <input type="text" name="username" autocomplete="username">
+            </label>
+            <label>
+                Contraseña
+                <input type="password" name="password" autocomplete="current-password">
+            </label>
+            <button type="submit">Acceder</button>
+        </form>
+    </div>
+    {% else %}
+    <a class="button" href="{{ url_for('index') }}">Volver al inicio</a>
+    {% endif %}
+</section>
+{% endblock %}

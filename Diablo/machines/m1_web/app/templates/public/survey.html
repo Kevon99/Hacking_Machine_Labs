@@ -1,0 +1,69 @@
+{% extends "public/base.html" %}
+
+{% block title %}Encuesta | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">Satisfacción</div>
+            <h1>Encuesta de servicio</h1>
+            <p class="muted">Su opinión nos ayuda a priorizar mejoras en el portal y en los servicios gestionados.</p>
+        </div>
+        <span class="status-dot">{{ total }} respuestas</span>
+    </div>
+
+    <div class="survey-layout">
+        <section class="card">
+            <h2>Valore su experiencia</h2>
+            <form method="post" action="{{ url_for('survey') }}" class="stack">
+                <fieldset class="rating-field">
+                    <legend>Valoración general</legend>
+                    <div class="rating-row">
+                        {% for score in range(1, 6) %}
+                        <label class="rating-option">
+                            <input type="radio" name="satisfaction" value="{{ score }}" required>
+                            <span>{{ score }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+
+                <label>
+                    Servicio utilizado
+                    <select name="service" required>
+                        <option value="portal">Portal de clientes</option>
+                        <option value="facturacion">Facturación</option>
+                        <option value="soporte">Soporte</option>
+                        <option value="integraciones">Integraciones</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </label>
+
+                <label>
+                    Comentario (opcional)
+                    <textarea name="feedback" rows="4" maxlength="1500"></textarea>
+                </label>
+
+                <button type="submit" class="primary">Enviar encuesta</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Resultados</h2>
+            <p class="muted">Distribución acumulada de valoraciones.</p>
+            <div class="result-list">
+                {% for item in results %}
+                <div class="result-row">
+                    <span class="result-label">{{ item.score }} / 5</span>
+                    <div class="result-track">
+                        <div class="result-fill" style="width: {{ item.percent }}%"></div>
+                    </div>
+                    <span class="result-value">{{ item.percent }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</section>
+{% endblock %}

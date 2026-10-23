@@ -1,0 +1,146 @@
+{% extends "public/base.html" %}
+{% block title %}Estado de la plataforma | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">Trust &amp; Operations</div>
+            <h1>Estado de la plataforma</h1>
+            <p class="muted">Telemetría agregada de los servicios públicos de Trickshot. Actualización automática cada 30 segundos.</p>
+        </div>
+        <div class="page-heading-actions">
+            <span class="status-dot" id="overall-status">Consultando</span>
+            <button class="button button-secondary" id="refresh-status" type="button">Actualizar</button>
+        </div>
+    </div>
+
+    <div class="live-grid" id="status-grid">
+        <article class="card live-card skeleton-card"><span class="live-label">API</span><strong>consultando…</strong></article>
+        <article class="card live-card skeleton-card"><span class="live-label">Soporte</span><strong>consultando…</strong></article>
+        <article class="card live-card skeleton-card"><span class="live-label">Facturación</span><strong>consultando…</strong></article>
+        <article class="card live-card skeleton-card"><span class="live-label">Autenticación</span><strong>consultando…</strong></article>
+        <article class="card live-card skeleton-card"><span class="live-label">Portal</span><strong>consultando…</strong></article>
+        <article class="card live-card skeleton-card"><span class="live-label">Documentación</span><strong>consultando…</strong></article>
+    </div>
+
+    <div class="two-column">
+        <section class="card">
+            <div class="section-head">
+                <h2>Componentes</h2>
+                <span class="muted" id="component-count">—</span>
+            </div>
+            <div id="component-list" class="component-list"></div>
+        </section>
+        <section class="card">
+            <div class="section-head">
+                <h2>Incidencias</h2>
+                <span class="muted">últimos 7 días</span>
+            </div>
+            <div id="incident-list" class="incident-list"></div>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="section-head">
+            <h2>Últimas peticiones entre subdominios</h2>
+            <span class="muted" id="request-total">0</span>
+        </div>
+        <div id="status-activity" class="activity-log" aria-live="polite"></div>
+    </section>
+</section>
+
+<script>
+    (() => {
+        const sites = {
+            api: "{{ sites.api }}",
+            status: "{{ sites.status }}",
+            support: "{{ sites.support }}",
+            billing: "{{ sites.billing }}",
+            auth: "{{ sites.auth }}",
+            portal: "{{ sites.portal }}",
+            docs: "{{ sites.docs }}"
+        };
+        const grid = document.getElementById('status-grid');
+        const activity = document.getElementById('status-activity');
+        let requests = 0;
+
+        const addActivity = (name, url, ok, ms) => {
+            requests += 1;
+            document.getElementById('request-total').textContent = requests + ' peticiones';
+            const row = document.createElement('div');
+            row.className = 'activity-row';
+            row.innerHTML = '<span class="mono">' + name + '</span>' +
+                '<span class="activity-state ' + (ok ? 'is-ok' : 'is-warn') + '">' + (ok ? 'OK' : 'ERROR') + '</span>' +
+                '<span class="muted">' + ms + ' ms · ' + url + '</span>';
+            activity.appendChild(row);
+        };
+
+        const load = async () => {
+            const targets = [
+                ['api', sites.api + '/api/v1/summary'],
+                ['support', sites.support + '/api/v1/summary'],
+                ['billing', sites.billing + '/api/v1/summary'],
+                ['auth', sites.auth + '/api/v1/summary'],
+                ['portal', sites.portal + '/api/v1/summary'],
+                ['docs', sites.docs + '/api/v1/summary'],
+                ['status', sites.status + '/api/v1/summary']
+            ];
+
+            const results = await Promise.all(targets.map(async ([name, url]) => {
+                const started = performance.now();
+                try {
+                    const response = await fetch(url, {cache: 'no-store'});
+                    const data = await response.json();
+                    addActivity(name, url, response.ok, Math.round(performance.now() - started));
+                    return {name, ok: response.ok, data};
+                } catch (error) {
+                    addActivity(name, url, false, Math.round(performance.now() - started));
+                    return {name, ok: false, data: null};
+                }
+            }));
+
+            grid.innerHTML = '';
+            results.filter((item) => item.name !== 'status').forEach((item) => {
+                const card = document.createElement('article');
+                card.className = 'card live-card';
+                const label = item.name.charAt(0).toUpperCase() + item.name.slice(1);
+                let headline = 'sin datos';
+                let detail = 'sin respuesta';
+                let statusClass = 'is-warn';
+
+                if (item.data) {
+                    const metrics = item.data.metrics || {};
+                    headline = item.data.status || 'operational';
+                    statusClass = headline === 'operational' ? 'is-ok' : 'is-warn';
+                    detail = Object.entries(metrics).slice(0, 3).map(([key, value]) => key + ': ' + value).join(' · ');
+                }
+
+                card.innerHTML = '<span class="live-label">' + label + '</span>' +
+                    '<strong class="' + statusClass + '">' + headline + '</strong>' +
+                    '<small class="muted">' + detail + '</small>';
+                grid.appendChild(card);
+            });
+
+            const statusResult = results.find((item) => item.name === 'status');
+            const overall = statusResult && statusResult.data && statusResult.data.metrics;
+            if (overall) {
+                const components = overall.components || [];
+                const incidents = overall.incidents || [];
+                document.getElementById('overall-status').textContent = overall.status === 'operational' ? 'Todos los sistemas operativos' : 'Servicio degradado';
+                document.getElementById('component-count').textContent = components.length + ' servicios';
+                document.getElementById('component-list').innerHTML = components.map((item) =>
+                    '<div class="component-row"><span>' + item.name + '</span><span class="mono">' + item.latency_ms + ' ms</span><span class="activity-state ' + (item.status === 'operational' ? 'is-ok' : 'is-warn') + '">' + item.status + '</span></div>'
+                ).join('');
+                document.getElementById('incident-list').innerHTML = incidents.map((item) =>
+                    '<article class="incident-item"><span class="mono">' + item.id + '</span><strong>' + item.title + '</strong><span class="muted">' + item.started_at + ' · ' + item.status + '</span></article>'
+                ).join('');
+            }
+        };
+
+        document.getElementById('refresh-status').addEventListener('click', load);
+        load();
+        window.setInterval(load, 30000);
+    })();
+</script>
+{% endblock %}

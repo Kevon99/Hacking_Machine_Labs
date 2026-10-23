@@ -1,0 +1,16 @@
+{% extends "public/base.html" %}
+
+{% block title %}Página no encontrada | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="eyebrow">Error 404</div>
+    <h1>No encontramos esa página.</h1>
+    <p class="muted">El recurso solicitado no existe o fue movido. Puede volver al inicio o consultar las secciones públicas.</p>
+    <div class="hero-actions">
+        <a class="button" href="{{ url_for('index') }}">Inicio</a>
+        <a class="button button-secondary" href="{{ url_for('comments') }}">Comentarios</a>
+        <a class="button button-secondary" href="{{ url_for('survey') }}">Encuesta</a>
+    </div>
+</section>
+{% endblock %}

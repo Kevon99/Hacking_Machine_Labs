@@ -1,0 +1,59 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Acceso | Trickshot DB Admin{% endblock %}
+
+{% block content %}
+<div class="auth-layout">
+    <section class="card auth-card">
+        <div class="eyebrow">Acceso restringido</div>
+        <h1>Administración de base de datos</h1>
+        <p class="muted">Utilice sus credenciales corporativas para consultar y administrar el sistema de tickets.</p>
+
+        <form method="post" action="{{ url_for('login') }}" class="stack">
+            <label>
+                Usuario
+                <input type="text" name="username" autocomplete="username" required>
+            </label>
+            <label>
+                Contraseña
+                <input type="password" name="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit" class="primary">Iniciar sesión</button>
+        </form>
+    </section>
+
+    <section class="card ticket-card">
+        <div class="eyebrow">Atención al cliente</div>
+        <h2>Consultar estado de ticket</h2>
+        <p class="muted">Ingrese el identificador del ticket para verificar si se encuentra registrado.</p>
+
+        <form id="ticket-form" class="inline-form">
+            <input type="text" id="ticket-id" name="ticket_id" placeholder="TCK-1001" required>
+            <button type="submit">Verificar</button>
+        </form>
+
+        <p id="ticket-result" class="ticket-result" aria-live="polite"></p>
+    </section>
+</div>
+
+<script>
+    const ticketForm = document.getElementById('ticket-form');
+    const ticketResult = document.getElementById('ticket-result');
+
+    ticketForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const ticketId = document.getElementById('ticket-id').value;
+        ticketResult.textContent = 'Consultando...';
+
+        try {
+            const response = await fetch('/api/v1/verify?ticket_id=' + encodeURIComponent(ticketId));
+            const data = await response.json();
+            ticketResult.textContent = data.status === 'found'
+                ? 'Ticket encontrado en el sistema.'
+                : 'Ticket no encontrado.';
+        } catch (error) {
+            ticketResult.textContent = 'No fue posible consultar el ticket.';
+        }
+    });
+</script>
+{% endblock %}

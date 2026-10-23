@@ -1,0 +1,35 @@
+{% extends "public/base.html" %}
+
+{% block title %}Registro | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section auth-public">
+    <div class="card auth-card">
+        <div class="eyebrow">Nuevo cliente</div>
+        <h1>Crear cuenta</h1>
+        <p class="muted">Registre sus datos para acceder al portal de clientes.</p>
+
+        <form method="post" action="{{ url_for('register') }}" class="stack">
+            <label>
+                Usuario
+                <input type="text" name="username" autocomplete="username" minlength="3" maxlength="32" required>
+            </label>
+            <label>
+                Nombre visible
+                <input type="text" name="display_name" autocomplete="name" minlength="2" maxlength="80" required>
+            </label>
+            <label>
+                Contraseña
+                <input type="password" name="password" autocomplete="new-password" minlength="8" required>
+            </label>
+            <label>
+                Repetir contraseña
+                <input type="password" name="confirm" autocomplete="new-password" minlength="8" required>
+            </label>
+            <button type="submit" class="primary">Crear cuenta</button>
+        </form>
+
+        <p class="form-note">¿Ya tiene una cuenta? <a href="{{ url_for('login') }}">Inicie sesión</a>.</p>
+    </div>
+</section>
+{% endblock %}

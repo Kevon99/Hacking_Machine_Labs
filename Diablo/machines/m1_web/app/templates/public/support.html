@@ -1,0 +1,131 @@
+{% extends "public/base.html" %}
+{% block title %}Soporte | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">Mesa de ayuda</div>
+            <h1>Soporte Trickshot</h1>
+            <p class="muted">Cree un caso y consulte la cola de atención. Las peticiones se envían a la API y se reflejan en el portal de clientes.</p>
+        </div>
+        <div class="page-heading-actions">
+            <span class="status-dot" id="support-status">Consultando</span>
+            <a class="button button-secondary" href="{{ sites.status }}/">Estado del servicio</a>
+        </div>
+    </div>
+
+    <div class="two-column">
+        <section class="card">
+            <div class="eyebrow">Nuevo caso</div>
+            <h2>Abrir una incidencia</h2>
+            <form id="ticket-form" class="stack">
+                <label>Asunto
+                    <input type="text" id="ticket-subject" maxlength="180" placeholder="Ej. Error al exportar facturas" required>
+                </label>
+                <label>Prioridad
+                    <select id="ticket-priority">
+                        <option value="low">Baja</option>
+                        <option value="medium" selected>Media</option>
+                        <option value="high">Alta</option>
+                        <option value="critical">Crítica</option>
+                    </select>
+                </label>
+                <button type="submit" class="primary">Crear caso</button>
+            </form>
+            <p class="form-note muted" id="ticket-result">Los casos se registran con el identificador TCK-XXXX.</p>
+        </section>
+
+        <section class="card">
+            <div class="section-head">
+                <h2>Resumen de la cola</h2>
+                <span class="muted" id="support-updated">—</span>
+            </div>
+            <div class="metric-grid" id="support-metrics"></div>
+            <p class="form-note muted">La API de soporte también alimenta la página de estado y el panel del cliente.</p>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="section-head">
+            <h2>Casos recientes</h2>
+            <button class="button button-secondary" id="refresh-tickets" type="button">Actualizar</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>ID</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Solicitante</th></tr></thead>
+                <tbody id="ticket-table"><tr><td colspan="5" class="muted">Cargando casos…</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+</section>
+
+<script>
+    (() => {
+        const api = "{{ sites.api }}";
+        const support = "{{ sites.support }}";
+
+        const renderSummary = (data) => {
+            const metrics = data.metrics || {};
+            document.getElementById('support-status').textContent = data.status === 'operational' ? 'Cola operativa' : 'Cola degradada';
+            document.getElementById('support-updated').textContent = new Date(data.generated_at).toLocaleTimeString();
+            document.getElementById('support-metrics').innerHTML = Object.entries(metrics).map(([key, value]) =>
+                '<div class="metric-tile"><span>' + key.replaceAll('_', ' ') + '</span><strong>' + value + '</strong></div>'
+            ).join('');
+        };
+
+        const loadSummary = async () => {
+            try {
+                const response = await fetch(support + '/api/v1/summary', {cache: 'no-store'});
+                renderSummary(await response.json());
+            } catch (error) {
+                document.getElementById('support-status').textContent = 'Sin conexión';
+            }
+        };
+
+        const loadTickets = async () => {
+            const body = document.getElementById('ticket-table');
+            try {
+                const response = await fetch(api + '/api/v1/support/tickets', {cache: 'no-store'});
+                const data = await response.json();
+                body.innerHTML = (data.tickets || []).map((ticket) =>
+                    '<tr><td class="mono">' + ticket.ticket_id + '</td><td>' + ticket.subject + '</td><td><span class="badge badge-' + ticket.priority + '">' + ticket.priority + '</span></td><td><span class="badge badge-' + ticket.status + '">' + ticket.status + '</span></td><td>' + ticket.opened_by + '</td></tr>'
+                ).join('') || '<tr><td colspan="5" class="muted">No hay casos.</td></tr>';
+            } catch (error) {
+                body.innerHTML = '<tr><td colspan="5" class="muted">No fue posible consultar la API.</td></tr>';
+            }
+        };
+
+        document.getElementById('ticket-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const result = document.getElementById('ticket-result');
+            result.textContent = 'Enviando a api.trickshot.local…';
+            try {
+                const response = await fetch(api + '/api/v1/support/tickets', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        subject: document.getElementById('ticket-subject').value,
+                        priority: document.getElementById('ticket-priority').value
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    result.textContent = 'Caso ' + data.ticket.ticket_id + ' creado correctamente.';
+                    document.getElementById('ticket-subject').value = '';
+                    loadTickets();
+                    loadSummary();
+                } else {
+                    result.textContent = data.reason || 'No fue posible crear el caso.';
+                }
+            } catch (error) {
+                result.textContent = 'No fue posible contactar con la API.';
+            }
+        });
+
+        document.getElementById('refresh-tickets').addEventListener('click', loadTickets);
+        loadSummary();
+        loadTickets();
+    })();
+</script>
+{% endblock %}

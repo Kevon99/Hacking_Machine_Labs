@@ -1,0 +1,103 @@
+{% extends "public/base.html" %}
+{% block title %}API | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">Public API v1</div>
+            <h1>Construya sobre Trickshot</h1>
+            <p class="muted">API REST para cuentas, métricas, soporte, facturación y documentación. Autenticación por sesión y tokens de integración.</p>
+        </div>
+        <div class="page-heading-actions">
+            <span class="status-dot" id="api-status">Consultando</span>
+            <a class="button button-secondary" href="{{ sites.docs }}/">Ver documentación</a>
+        </div>
+    </div>
+
+    <div class="two-column">
+        <section class="card">
+            <div class="eyebrow">Base URL</div>
+            <h2 class="mono">http://api.trickshot.local</h2>
+            <p class="muted">Todas las respuestas son JSON. Los endpoints privados requieren la cookie de sesión <span class="mono">ts_session</span> o un token Bearer.</p>
+            <pre class="code-block">curl -s {{ sites.api }}/api/v1/status
+curl -s {{ sites.api }}/api/v1/products
+curl -s {{ sites.api }}/api/v1/platform/status</pre>
+            <div class="inline-actions">
+                <button class="button" data-path="/api/v1/status">Probar status</button>
+                <button class="button button-secondary" data-path="/api/v1/products">Probar productos</button>
+            </div>
+            <pre id="api-live-output" class="code-block">Seleccione una petición.</pre>
+        </section>
+
+        <section class="card">
+            <div class="section-head">
+                <h2>Resumen del servicio</h2>
+                <span class="muted" id="api-summary-time">—</span>
+            </div>
+            <div class="metric-grid" id="api-summary"></div>
+            <p class="form-note muted">La página de estado consulta este mismo resumen desde status.trickshot.local.</p>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="section-head">
+            <h2>Endpoints disponibles</h2>
+            <span class="muted">v1</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Método</th><th>Ruta</th><th>Descripción</th></tr></thead>
+                <tbody>
+                    <tr><td><span class="badge badge-open">GET</span></td><td class="mono">/api/v1/status</td><td>Estado básico del gateway.</td></tr>
+                    <tr><td><span class="badge badge-open">GET</span></td><td class="mono">/api/v1/products</td><td>Catálogo de planes y licencias.</td></tr>
+                    <tr><td><span class="badge badge-open">GET</span></td><td class="mono">/api/v1/summary</td><td>Resumen dependiente del subdominio.</td></tr>
+                    <tr><td><span class="badge badge-open">GET</span></td><td class="mono">/api/v1/support/tickets</td><td>Cola de soporte.</td></tr>
+                    <tr><td><span class="badge badge-open">POST</span></td><td class="mono">/api/v1/support/tickets</td><td>Crear un caso de soporte.</td></tr>
+                    <tr><td><span class="badge badge-open">GET</span></td><td class="mono">/api/v1/billing/invoices</td><td>Facturas y estado de pago.</td></tr>
+                    <tr><td><span class="badge badge-open">GET</span></td><td class="mono">/api/v1/account</td><td>Cuenta autenticada.</td></tr>
+                    <tr><td><span class="badge badge-open">GET</span></td><td class="mono">/api/v1/account/metrics</td><td>Métricas de la cuenta.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
+
+<script>
+    (() => {
+        const api = "{{ sites.api }}";
+        const output = document.getElementById('api-live-output');
+
+        const loadSummary = async () => {
+            try {
+                const response = await fetch(api + '/api/v1/summary', {cache: 'no-store'});
+                const data = await response.json();
+                document.getElementById('api-status').textContent = data.status === 'operational' ? 'API operativa' : 'API degradada';
+                document.getElementById('api-summary-time').textContent = new Date(data.generated_at).toLocaleTimeString();
+                document.getElementById('api-summary').innerHTML = Object.entries(data.metrics || {}).map(([key, value]) =>
+                    '<div class="metric-tile"><span>' + key.replaceAll('_', ' ') + '</span><strong>' + value + '</strong></div>'
+                ).join('');
+            } catch (error) {
+                document.getElementById('api-status').textContent = 'Sin conexión';
+            }
+        };
+
+        document.querySelectorAll('[data-path]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const path = button.dataset.path;
+                output.textContent = 'GET ' + api + path;
+                try {
+                    const started = performance.now();
+                    const response = await fetch(api + path, {cache: 'no-store'});
+                    const data = await response.json();
+                    output.textContent = 'HTTP ' + response.status + ' · ' + Math.round(performance.now() - started) + ' ms\n\n' + JSON.stringify(data, null, 2);
+                } catch (error) {
+                    output.textContent = 'No fue posible ejecutar la petición.';
+                }
+            });
+        });
+
+        loadSummary();
+    })();
+</script>
+{% endblock %}

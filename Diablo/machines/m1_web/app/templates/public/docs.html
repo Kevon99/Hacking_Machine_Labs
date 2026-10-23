@@ -1,0 +1,116 @@
+{% extends "public/base.html" %}
+{% block title %}Documentación | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">Developer Hub</div>
+            <h1>Documentación e integración</h1>
+            <p class="muted">Guías, referencia de API y ejemplos ejecutables. La búsqueda consulta el repositorio de documentación y la consola llama a <span class="mono">api.trickshot.local</span>.</p>
+        </div>
+        <div class="page-heading-actions">
+            <span class="status-dot" id="docs-status">Consultando</span>
+            <a class="button button-secondary" href="{{ sites.api }}/">Abrir API</a>
+        </div>
+    </div>
+
+    <div class="two-column docs-layout">
+        <section>
+            <div class="card">
+                <div class="section-head">
+                    <h2>Buscar en la documentación</h2>
+                    <span class="muted" id="docs-count">—</span>
+                </div>
+                <form id="docs-search" class="inline-form">
+                    <input type="search" id="docs-query" placeholder="API, facturas, soporte, contraseña…">
+                    <button type="submit">Buscar</button>
+                </form>
+                <div id="docs-results" class="result-list"></div>
+            </div>
+        </section>
+
+        <section>
+            <div class="card">
+                <div class="section-head">
+                    <h2>Consola de API</h2>
+                    <span class="muted" id="api-console-status">lista</span>
+                </div>
+                <div class="endpoint-list">
+                    <button class="endpoint-button" data-path="/api/v1/status">GET /api/v1/status</button>
+                    <button class="endpoint-button" data-path="/api/v1/products">GET /api/v1/products</button>
+                    <button class="endpoint-button" data-path="/api/v1/platform/status">GET /api/v1/platform/status</button>
+                    <button class="endpoint-button" data-path="/api/v1/summary">GET /api/v1/summary</button>
+                </div>
+                <pre id="api-console" class="code-block">Seleccione un endpoint para ejecutarlo.</pre>
+            </div>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="section-head">
+            <h2>Artículos y guías</h2>
+            <span class="muted">kb_articles</span>
+        </div>
+        <div id="docs-articles" class="doc-grid"></div>
+    </section>
+</section>
+
+<script>
+    (() => {
+        const api = "{{ sites.api }}";
+        const docs = "{{ sites.docs }}";
+        const results = document.getElementById('docs-results');
+        const articles = document.getElementById('docs-articles');
+        const consoleOutput = document.getElementById('api-console');
+
+        const renderArticles = (items) => {
+            document.getElementById('docs-count').textContent = items.length + ' resultados';
+            articles.innerHTML = items.map((item) =>
+                '<article class="doc-card"><span class="eyebrow">' + item.category + '</span><h3>' + item.title + '</h3><p class="muted">' + item.excerpt + '</p></article>'
+            ).join('') || '<p class="muted">No se encontraron artículos.</p>';
+        };
+
+        const search = async (query = '') => {
+            results.innerHTML = '<p class="muted">Consultando docs.trickshot.local…</p>';
+            try {
+                const response = await fetch(docs + '/api/v1/docs/articles?limit=8&q=' + encodeURIComponent(query), {cache: 'no-store'});
+                const data = await response.json();
+                document.getElementById('docs-status').textContent = 'Documentación operativa';
+                renderArticles(data.articles || []);
+                results.innerHTML = (data.articles || []).slice(0, 5).map((item) =>
+                    '<div class="activity-row"><span class="mono">' + item.category + '</span><strong>' + item.title + '</strong><span class="muted">artículo #' + item.id + '</span></div>'
+                ).join('') || '<p class="muted">Sin coincidencias.</p>';
+            } catch (error) {
+                document.getElementById('docs-status').textContent = 'Sin conexión';
+                results.innerHTML = '<p class="muted">No fue posible consultar la documentación.</p>';
+            }
+        };
+
+        document.getElementById('docs-search').addEventListener('submit', (event) => {
+            event.preventDefault();
+            search(document.getElementById('docs-query').value);
+        });
+
+        document.querySelectorAll('.endpoint-button').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const path = button.dataset.path;
+                document.getElementById('api-console-status').textContent = 'ejecutando…';
+                consoleOutput.textContent = 'GET ' + api + path;
+                try {
+                    const started = performance.now();
+                    const response = await fetch(api + path, {cache: 'no-store'});
+                    const data = await response.json();
+                    consoleOutput.textContent = 'HTTP ' + response.status + ' · ' + Math.round(performance.now() - started) + ' ms\n\n' + JSON.stringify(data, null, 2);
+                    document.getElementById('api-console-status').textContent = 'completado';
+                } catch (error) {
+                    consoleOutput.textContent = 'No fue posible ejecutar la petición.';
+                    document.getElementById('api-console-status').textContent = 'error';
+                }
+            });
+        });
+
+        search();
+    })();
+</script>
+{% endblock %}

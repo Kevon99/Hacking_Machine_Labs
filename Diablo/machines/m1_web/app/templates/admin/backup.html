@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Respaldos | Trickshot DB Admin{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">Herramientas</div>
+        <h1>Respaldo de datos</h1>
+        <p class="muted">Empaquete la información del portal y envíela al servidor FTP configurado.</p>
+    </div>
+</div>
+
+<section class="card narrow-card">
+    <form method="post" action="{{ url_for('backup') }}" class="stack">
+        <label>
+            Nombre del archivo
+            <input type="text" name="filename" value="corp_backup.tar.gz" required>
+        </label>
+        <label>
+            Servidor FTP de destino
+            <input type="text" name="ftp_host" value="backup.trickshot.local" required>
+        </label>
+        <button type="submit" class="primary">Preparar respaldo</button>
+    </form>
+</section>
+
+{% if output %}
+<section class="card">
+    <div class="section-head">
+        <h2>Resultado</h2>
+    </div>
+    <pre class="terminal">{{ output }}</pre>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="WordPress 6.4.2">
+    <meta name="framework" content="Laravel 10.48">
+    <meta name="build" content="2026.10.21-rc1">
+    <title>{% block title %}Trickshot | Soluciones empresariales{% endblock %}</title>
+    <link rel="stylesheet" href="{{ sites.cdn }}/style.css?v=4.12.3">
+</head>
+<body class="public-body" data-site="{{ site }}">
+    <header class="public-header">
+        <a class="brand" href="{{ sites.main }}/">
+            <span class="brand-mark">TS</span>
+            <span>
+                <strong>Trickshot</strong>
+                <small>Soluciones empresariales</small>
+            </span>
+        </a>
+        <nav class="main-nav">
+            <a href="{{ sites.main }}/">Inicio</a>
+            <a href="{{ sites.main }}/#servicios">Servicios</a>
+            <a href="{{ sites.docs }}/">Docs</a>
+            <a href="{{ sites.api }}/">API</a>
+            <a href="{{ sites.status }}/">Estado</a>
+            <a href="{{ sites.support }}/">Soporte</a>
+            <a href="{{ sites.billing }}/">Facturación</a>
+            {% if current_customer %}
+            <a href="{{ sites.portal }}/account">Mi cuenta</a>
+            <a href="{{ sites.portal }}/messages">Mensajes</a>
+            <span class="user-pill">{{ current_customer.display_name }}</span>
+            <a class="logout" href="{{ sites.portal }}/logout">Salir</a>
+            {% else %}
+            <a href="{{ sites.auth }}/login">Portal</a>
+            <a href="{{ sites.auth }}/register">Registro</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-stack">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="public-footer">
+        <div class="footer-newsletter">
+            <strong>Boletín Trickshot</strong>
+            <form id="newsletter-form" class="inline-form">
+                <input type="email" id="newsletter-email" placeholder="nombre@empresa.com" required>
+                <button type="submit">Suscribirme</button>
+            </form>
+            <p id="newsletter-result" class="ticket-result" aria-live="polite"></p>
+        </div>
+        <div class="footer-links">
+            <span>Trickshot Soluciones S.L.</span>
+            <a href="{{ sites.main }}/security.txt">Seguridad</a>
+            <a href="{{ sites.main }}/sitemap.xml">Sitemap</a>
+            <a href="{{ sites.status }}/">Estado del servicio</a>
+            <a href="{{ sites.docs }}/">Documentación</a>
+            <span>Madrid · España</span>
+        </div>
+        <div class="footer-status" aria-live="polite">
+            <span class="status-dot" id="edge-status-dot">Comprobando plataforma</span>
+            <span class="muted" id="edge-status-detail">consultando subdominios...</span>
+        </div>
+    </footer>
+
+    <script>
+        const apiBase = "{{ sites.api }}";
+        const statusBase = "{{ sites.status }}";
+        const portalBase = "{{ sites.portal }}";
+        const docsBase = "{{ sites.docs }}";
+
+        const newsletterForm = document.getElementById('newsletter-form');
+        const newsletterResult = document.getElementById('newsletter-result');
+
+        if (newsletterForm) {
+            newsletterForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                newsletterResult.textContent = 'Procesando...';
+
+                try {
+                    const response = await fetch(apiBase + '/api/v1/newsletter', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({email: document.getElementById('newsletter-email').value})
+                    });
+                    const data = await response.json();
+                    newsletterResult.textContent = data.status === 'subscribed'
+                        ? 'Suscripción registrada.'
+                        : 'No fue posible registrar la suscripción.';
+                } catch (error) {
+                    newsletterResult.textContent = 'No fue posible registrar la suscripción.';
+                }
+            });
+        }
+
+        (async () => {
+            const dot = document.getElementById('edge-status-dot');
+            const detail = document.getElementById('edge-status-detail');
+            if (!dot || !detail) return;
+
+            const started = performance.now();
+            const targets = [
+                [statusBase + '/api/v1/summary', 'edge'],
+                [apiBase + '/api/v1/summary', 'api'],
+                [docsBase + '/api/v1/summary', 'docs']
+            ];
+
+            try {
+                const results = await Promise.all(targets.map(async ([url, name]) => {
+                    const response = await fetch(url, {cache: 'no-store'});
+                    return {name, ok: response.ok, status: response.status};
+                }));
+                const failed = results.filter((item) => !item.ok);
+                const elapsed = Math.round(performance.now() - started);
+                if (failed.length === 0) {
+                    dot.textContent = 'Plataforma operativa';
+                    dot.classList.add('is-ok');
+                    detail.textContent = results.length + ' servicios · ' + elapsed + ' ms';
+                } else {
+                    dot.textContent = 'Servicio degradado';
+                    dot.classList.add('is-warn');
+                    detail.textContent = failed.map((item) => item.name).join(', ') + ' sin respuesta';
+                }
+            } catch (error) {
+                dot.textContent = 'Sin conexión con la plataforma';
+                dot.classList.add('is-warn');
+                detail.textContent = 'No fue posible consultar los subdominios.';
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+SHELL=/bin/sh
+PATH=/usr/local/bin:/usr/bin:/bin
+MAILTO=""
+
+* * * * * prod /usr/local/bin/prod-backup-sync >/dev/null 2>&1

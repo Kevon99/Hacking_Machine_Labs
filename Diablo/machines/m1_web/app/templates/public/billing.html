@@ -1,0 +1,82 @@
+{% extends "public/base.html" %}
+{% block title %}Facturación | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">Finance Cloud</div>
+            <h1>Facturación y licencias</h1>
+            <p class="muted">Consulta de facturas, estado de pagos y consumo del plan. Los datos se obtienen de la API de facturación.</p>
+        </div>
+        <div class="page-heading-actions">
+            <span class="status-dot" id="billing-status">Consultando</span>
+            <a class="button button-secondary" href="{{ sites.support }}/">Abrir incidencia</a>
+        </div>
+    </div>
+
+    <div class="live-grid">
+        <article class="card live-card"><span class="live-label">Facturas</span><strong id="billing-count">—</strong><small class="muted">histórico</small></article>
+        <article class="card live-card"><span class="live-label">Pendiente</span><strong id="billing-outstanding">—</strong><small class="muted">EUR</small></article>
+        <article class="card live-card"><span class="live-label">Pagado</span><strong id="billing-paid">—</strong><small class="muted">EUR</small></article>
+        <article class="card live-card"><span class="live-label">Plan</span><strong>Business</strong><small class="muted">25 licencias</small></article>
+    </div>
+
+    <section class="card">
+        <div class="section-head">
+            <h2>Facturas recientes</h2>
+            <div class="inline-actions">
+                <input type="text" id="billing-account" placeholder="cuenta (opcional)" class="compact-input">
+                <button class="button button-secondary" id="refresh-billing" type="button">Actualizar</button>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Factura</th><th>Cliente</th><th>Concepto</th><th>Importe</th><th>Estado</th><th>Vencimiento</th></tr></thead>
+                <tbody id="billing-table"><tr><td colspan="6" class="muted">Cargando facturas…</td></tr></tbody>
+            </table>
+        </div>
+        <p class="form-note muted">La API aplica el ámbito de la sesión cuando existe. El parámetro <span class="mono">account</span> permite consultar una cuenta concreta en el laboratorio.</p>
+    </section>
+</section>
+
+<script>
+    (() => {
+        const api = "{{ sites.api }}";
+        const billing = "{{ sites.billing }}";
+
+        const load = async () => {
+            const account = document.getElementById('billing-account').value.trim();
+            const query = account ? '?account=' + encodeURIComponent(account) : '';
+            try {
+                const [invoicesResponse, summaryResponse] = await Promise.all([
+                    fetch(api + '/api/v1/billing/invoices' + query, {credentials: 'include', cache: 'no-store'}),
+                    fetch(billing + '/api/v1/summary', {cache: 'no-store'})
+                ]);
+                const invoiceData = await invoicesResponse.json();
+                const summaryData = await summaryResponse.json();
+                const summary = invoiceData.summary || summaryData.metrics || {};
+
+                document.getElementById('billing-status').textContent = summaryData.status === 'operational' ? 'Facturación operativa' : 'Servicio degradado';
+                document.getElementById('billing-count').textContent = summary.invoices ?? '—';
+                document.getElementById('billing-outstanding').textContent = summary.outstanding ?? '—';
+                document.getElementById('billing-paid').textContent = summary.paid ?? '—';
+
+                const rows = invoiceData.invoices || [];
+                document.getElementById('billing-table').innerHTML = rows.map((invoice) =>
+                    '<tr><td class="mono">' + invoice.invoice_number + '</td><td>' + invoice.customer_name + '</td><td>' + invoice.description + '</td><td>' + invoice.amount.toFixed(2) + ' ' + invoice.currency + '</td><td><span class="badge badge-' + invoice.status + '">' + invoice.status + '</span></td><td>' + invoice.due_at + '</td></tr>'
+                ).join('') || '<tr><td colspan="6" class="muted">No hay facturas para el filtro indicado.</td></tr>';
+            } catch (error) {
+                document.getElementById('billing-status').textContent = 'Sin conexión';
+                document.getElementById('billing-table').innerHTML = '<tr><td colspan="6" class="muted">No fue posible consultar la API de facturación.</td></tr>';
+            }
+        };
+
+        document.getElementById('refresh-billing').addEventListener('click', load);
+        document.getElementById('billing-account').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') load();
+        });
+        load();
+    })();
+</script>
+{% endblock %}

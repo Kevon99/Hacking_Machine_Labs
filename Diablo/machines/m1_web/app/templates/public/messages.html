@@ -1,0 +1,91 @@
+{% extends "public/base.html" %}
+
+{% block title %}Mensajes | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">Mensajería interna</div>
+            <h1>Mensajes</h1>
+            <p class="muted">Envía mensajes a otros clientes usando su nombre de usuario.</p>
+        </div>
+        <span class="status-dot">{{ unread }} sin leer</span>
+    </div>
+
+    <div class="messages-layout">
+        <section class="card">
+            <div class="section-head">
+                <h2>Nuevo mensaje</h2>
+                <span class="muted">API: /api/v1/messages</span>
+            </div>
+            <form method="post" action="{{ url_for('messages') }}" class="stack">
+                <label>
+                    Destinatario (username)
+                    <input type="text" name="recipient" placeholder="ana.torres" autocomplete="off" required>
+                </label>
+                <label>
+                    Asunto
+                    <input type="text" name="subject" maxlength="160" placeholder="Consulta sobre mi cuenta">
+                </label>
+                <label>
+                    Mensaje
+                    <textarea name="body" rows="7" maxlength="4000" required placeholder="Escribe tu mensaje..."></textarea>
+                </label>
+                <button type="submit" class="primary">Enviar mensaje</button>
+            </form>
+            <p class="form-note muted">El destinatario debe tener una cuenta activa en el portal. Los mensajes se entregan en la bandeja interna.</p>
+        </section>
+
+        <div class="message-column">
+            <section class="card">
+                <div class="section-head">
+                    <h2>Bandeja de entrada</h2>
+                    <span class="muted">{{ inbox|length }} mensajes</span>
+                </div>
+                {% if inbox %}
+                <div class="message-list">
+                    {% for message in inbox %}
+                    <article class="message-item{% if not message.is_read %} message-unread{% endif %}">
+                        <div class="message-meta">
+                            <strong>{{ message.sender_name }}</strong>
+                            <span class="mono">@{{ message.sender }}</span>
+                            <span class="muted">{{ message.created_at }}</span>
+                        </div>
+                        <h3>{{ message.subject }}</h3>
+                        <p>{{ message.body }}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="muted">No tienes mensajes en la bandeja de entrada.</p>
+                {% endif %}
+            </section>
+
+            <section class="card">
+                <div class="section-head">
+                    <h2>Enviados</h2>
+                    <span class="muted">{{ sent|length }} mensajes</span>
+                </div>
+                {% if sent %}
+                <div class="message-list">
+                    {% for message in sent %}
+                    <article class="message-item">
+                        <div class="message-meta">
+                            <strong>Para {{ message.recipient_name }}</strong>
+                            <span class="mono">@{{ message.recipient }}</span>
+                            <span class="muted">{{ message.created_at }}</span>
+                        </div>
+                        <h3>{{ message.subject }}</h3>
+                        <p>{{ message.body }}</p>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="muted">Todavía no has enviado mensajes.</p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+</section>
+{% endblock %}

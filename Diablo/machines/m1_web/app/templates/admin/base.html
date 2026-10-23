@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Trickshot DB Admin{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="admin-body">
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark">TS</span>
+            <span>
+                <strong>Trickshot</strong>
+                <small>Database Administration</small>
+            </span>
+        </div>
+        {% if session.get('user') %}
+        <nav class="main-nav">
+            <a href="{{ url_for('dashboard') }}">Panel</a>
+            <a href="{{ url_for('reports') }}">Reportes</a>
+            <a href="{{ url_for('backup') }}">Respaldos</a>
+            <span class="user-pill">{{ session.get('user') }}</span>
+            <a class="logout" href="{{ url_for('logout') }}">Salir</a>
+        </nav>
+        {% endif %}
+    </header>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

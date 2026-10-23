@@ -1,0 +1,190 @@
+{% extends "public/base.html" %}
+
+{% block title %}Trickshot | Infraestructura digital{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <div class="eyebrow">Tecnología corporativa</div>
+        <h1>Infraestructura digital para empresas que no se detienen.</h1>
+        <p>Plataformas de atención al cliente, integración de sistemas y continuidad operativa para organizaciones en crecimiento.</p>
+        <div class="hero-actions">
+            <a class="button" href="#servicios">Conocer servicios</a>
+            <a class="button button-secondary" href="{{ url_for('comments') }}">Ver comentarios</a>
+        </div>
+    </div>
+    <div class="hero-panel">
+        <div class="panel-row">
+            <span>Disponibilidad</span>
+            <strong>99.95%</strong>
+        </div>
+        <div class="panel-row">
+            <span>Clientes activos</span>
+            <strong>240+</strong>
+        </div>
+        <div class="panel-row">
+            <span>Soporte</span>
+            <strong>24 / 7</strong>
+        </div>
+    </div>
+</section>
+
+<section id="servicios" class="section">
+    <div class="eyebrow">Servicios</div>
+    <h2>Operación empresarial conectada</h2>
+    <div class="service-grid">
+        <article class="service-card">
+            <span class="action-icon">01</span>
+            <h3>Atención al cliente</h3>
+            <p>Gestión centralizada de tickets, seguimiento de casos y métricas de servicio.</p>
+        </article>
+        <article class="service-card">
+            <span class="action-icon">02</span>
+            <h3>Integración de sistemas</h3>
+            <p>Conectamos aplicaciones internas con procesos seguros y trazables.</p>
+        </article>
+        <article class="service-card">
+            <span class="action-icon">03</span>
+            <h3>Continuidad operativa</h3>
+            <p>Respaldos, monitoreo y planes de recuperación para la operación diaria.</p>
+        </article>
+    </div>
+</section>
+
+<section id="empresa" class="section split-section">
+    <div>
+        <div class="eyebrow">Trickshot</div>
+        <h2>Un socio tecnológico para la operación diaria.</h2>
+    </div>
+    <p>Desde hace más de una década acompañamos a equipos de tecnología y operaciones en la construcción de plataformas estables, seguras y preparadas para crecer.</p>
+</section>
+
+<section class="section voice-section">
+    <div>
+        <div class="eyebrow">Comunidad</div>
+        <h2>Lo que dicen nuestros clientes.</h2>
+        <p class="muted">Comparte tu experiencia en el panel de comentarios o participa en la encuesta de satisfacción.</p>
+    </div>
+    <div class="voice-actions">
+        <a class="button" href="{{ url_for('comments') }}">Dejar un comentario</a>
+        <a class="button button-secondary" href="{{ url_for('survey') }}">Responder encuesta</a>
+    </div>
+</section>
+
+<section id="plataforma" class="section">
+    <div class="section-head">
+        <div>
+            <div class="eyebrow">Plataforma en vivo</div>
+            <h2>Una empresa conectada por servicios.</h2>
+            <p class="muted">El sitio corporativo consulta la API, el estado, la documentación, soporte y facturación en tiempo real.</p>
+        </div>
+        <a class="button button-secondary" href="{{ sites.status }}/">Ver estado detallado</a>
+    </div>
+    <div class="live-grid">
+        <article class="card live-card">
+            <span class="live-label">API Gateway</span>
+            <strong id="company-api-status">consultando…</strong>
+            <small id="company-api-detail" class="muted">/api/v1/platform/status</small>
+        </article>
+        <article class="card live-card">
+            <span class="live-label">Mesa de soporte</span>
+            <strong id="company-support-status">consultando…</strong>
+            <small id="company-support-detail" class="muted">support.trickshot.local</small>
+        </article>
+        <article class="card live-card">
+            <span class="live-label">Facturación</span>
+            <strong id="company-billing-status">consultando…</strong>
+            <small id="company-billing-detail" class="muted">billing.trickshot.local</small>
+        </article>
+        <article class="card live-card">
+            <span class="live-label">Documentación</span>
+            <strong id="company-docs-status">consultando…</strong>
+            <small id="company-docs-detail" class="muted">docs.trickshot.local</small>
+        </article>
+    </div>
+    <div class="live-activity card">
+        <div class="section-head">
+            <h3>Solicitudes recientes a subdominios</h3>
+            <span class="muted" id="company-request-count">0 peticiones</span>
+        </div>
+        <div id="company-activity" class="activity-log" aria-live="polite"></div>
+    </div>
+</section>
+
+<section id="contacto" class="section contact-section">
+    <div>
+        <div class="eyebrow">Contacto</div>
+        <h2>Hablemos de su próxima iniciativa.</h2>
+    </div>
+    <div class="contact-details">
+        <span>contacto@trickshot.local</span>
+        <span>+34 900 000 000</span>
+        <span>Madrid · España</span>
+    </div>
+</section>
+
+<script>
+    (() => {
+        const api = "{{ sites.api }}";
+        const status = "{{ sites.status }}";
+        const docs = "{{ sites.docs }}";
+        const support = "{{ sites.support }}";
+        const billing = "{{ sites.billing }}";
+        const activity = document.getElementById('company-activity');
+        const requestCount = document.getElementById('company-request-count');
+        let completed = 0;
+
+        const log = (label, ok, detail) => {
+            completed += 1;
+            requestCount.textContent = completed + ' peticiones';
+            const row = document.createElement('div');
+            row.className = 'activity-row';
+            row.innerHTML = '<span class="mono">' + label + '</span>' +
+                '<span class="activity-state ' + (ok ? 'is-ok' : 'is-warn') + '">' +
+                (ok ? '200 OK' : 'ERROR') + '</span>' +
+                '<span class="muted">' + detail + '</span>';
+            activity.appendChild(row);
+        };
+
+        const query = async (url, label) => {
+            const started = performance.now();
+            try {
+                const response = await fetch(url, {cache: 'no-store'});
+                const data = await response.json();
+                log(label, response.ok, Math.round(performance.now() - started) + ' ms');
+                return data;
+            } catch (error) {
+                log(label, false, 'sin respuesta');
+                return null;
+            }
+        };
+
+        (async () => {
+            const [platform, supportData, billingData, docsData] = await Promise.all([
+                query(api + '/api/v1/platform/status', 'api.trickshot.local/api/v1/platform/status'),
+                query(support + '/api/v1/summary', 'support.trickshot.local/api/v1/summary'),
+                query(billing + '/api/v1/summary', 'billing.trickshot.local/api/v1/summary'),
+                query(docs + '/api/v1/docs/articles?limit=3', 'docs.trickshot.local/api/v1/docs/articles')
+            ]);
+
+            if (platform) {
+                const degraded = (platform.components || []).filter((item) => item.status !== 'operational');
+                document.getElementById('company-api-status').textContent = degraded.length ? 'degradado' : 'operativo';
+                document.getElementById('company-api-detail').textContent = (platform.components || []).length + ' componentes · ' + platform.region;
+            }
+            if (supportData) {
+                document.getElementById('company-support-status').textContent = supportData.metrics.open + ' casos abiertos';
+                document.getElementById('company-support-detail').textContent = 'primera respuesta ' + supportData.metrics.first_response_minutes + ' min';
+            }
+            if (billingData) {
+                document.getElementById('company-billing-status').textContent = billingData.metrics.invoices + ' facturas';
+                document.getElementById('company-billing-detail').textContent = 'pendiente ' + billingData.metrics.outstanding + ' EUR';
+            }
+            if (docsData) {
+                document.getElementById('company-docs-status').textContent = docsData.articles.length + ' artículos';
+                document.getElementById('company-docs-detail').textContent = docsData.articles.map((item) => item.category).join(' · ');
+            }
+        })();
+    })();
+</script>
+{% endblock %}

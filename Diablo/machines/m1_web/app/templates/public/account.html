@@ -1,0 +1,218 @@
+{% extends "public/base.html" %}
+
+{% block title %}Mi cuenta | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">Portal de clientes</div>
+            <h1>Hola, {{ current_customer.display_name }}</h1>
+            <p class="muted">Sesión iniciada como <span class="mono">{{ current_customer.username }}</span>.</p>
+        </div>
+        <span class="status-dot">Cuenta activa</span>
+    </div>
+
+    <div class="account-grid">
+        <section class="card">
+            <div class="section-head">
+                <h2>Casos recientes</h2>
+                <span class="muted">3 registros</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Referencia</th>
+                            <th>Asunto</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for case in cases %}
+                        <tr>
+                            <td class="mono">{{ case.ref }}</td>
+                            <td>{{ case.subject }}</td>
+                            <td><span class="badge badge-low">{{ case.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="section-head">
+                <h2>Presupuestos</h2>
+                <span class="muted">2 registros</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Referencia</th>
+                            <th>Plan</th>
+                            <th>Licencias</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for quote in quotes %}
+                        <tr>
+                            <td class="mono">{{ quote.ref }}</td>
+                            <td>{{ quote.plan }}</td>
+                            <td>{{ quote.seats }}</td>
+                            <td><span class="badge badge-medium">{{ quote.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="section-head">
+            <h2>Métricas de cuenta</h2>
+            <span class="muted">API: /api/v1/account/metrics</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Métrica</th>
+                        <th>Valor</th>
+                        <th>Actualizado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for metric in metrics %}
+                    <tr>
+                        <td class="mono">{{ metric.id }}</td>
+                        <td class="mono">{{ metric.key|replace('_', ' ') }}</td>
+                        <td>{{ metric.value }}</td>
+                        <td class="muted">{{ metric.updated_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note muted">Los identificadores de métricas son secuenciales. El acceso por API está restringido a la cuenta autenticada.</p>
+    </section>
+
+    <section class="card">
+        <div class="section-head">
+            <h2>Mensajes</h2>
+            <a class="button button-secondary" href="{{ url_for('messages') }}">Abrir panel de mensajes</a>
+        </div>
+        <p class="muted">{{ unread }} mensajes sin leer. Puedes escribir a otros usuarios por su nombre de usuario.</p>
+        {% if inbox %}
+        <div class="message-list">
+            {% for message in inbox %}
+            <article class="message-item{% if not message.is_read %} message-unread{% endif %}">
+                <div class="message-meta">
+                    <strong>{{ message.sender_name }}</strong>
+                    <span class="mono">@{{ message.sender }}</span>
+                    <span class="muted">{{ message.created_at }}</span>
+                </div>
+                <h3>{{ message.subject }}</h3>
+                <p>{{ message.body }}</p>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted">No tienes mensajes recientes.</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <div class="section-head">
+            <h2>Actividad en vivo</h2>
+            <div class="inline-actions">
+                <span class="muted" id="account-live-updated">—</span>
+                <button class="button button-secondary" id="refresh-account-live" type="button">Actualizar</button>
+            </div>
+        </div>
+        <p class="muted">Esta tarjeta consulta la API, el servicio de mensajes y la facturación desde otros subdominios.</p>
+        <div class="metric-grid" id="account-live-metrics"></div>
+        <div id="account-live-activity" class="activity-log" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+        <div class="section-head">
+            <h2>Preferencias de cuenta</h2>
+        </div>
+        <p class="muted">Las preferencias de notificación se gestionan con su gestor de cuenta. Los cambios pueden tardar hasta 24 horas.</p>
+        <a class="button button-secondary" href="{{ sites.main }}/">Volver al inicio</a>
+    </section>
+</section>
+
+<script>
+    (() => {
+        const api = "{{ sites.api }}";
+        const billing = "{{ sites.billing }}";
+        const support = "{{ sites.support }}";
+        const activity = document.getElementById('account-live-activity');
+
+        const log = (name, ok, ms) => {
+            const row = document.createElement('div');
+            row.className = 'activity-row';
+            row.innerHTML = '<span class="mono">' + name + '</span><span class="activity-state ' + (ok ? 'is-ok' : 'is-warn') + '">' + (ok ? 'OK' : 'ERROR') + '</span><span class="muted">' + ms + ' ms</span>';
+            activity.appendChild(row);
+        };
+
+        const load = async () => {
+            activity.innerHTML = '';
+            const targets = [
+                ['api/account', api + '/api/v1/account'],
+                ['api/messages', api + '/api/v1/messages'],
+                ['billing/invoices', billing + '/api/v1/billing/invoices'],
+                ['support/summary', support + '/api/v1/summary']
+            ];
+
+            const results = await Promise.all(targets.map(async ([name, url]) => {
+                const started = performance.now();
+                try {
+                    const response = await fetch(url, {credentials: 'include', cache: 'no-store'});
+                    log(name, response.ok, Math.round(performance.now() - started));
+                    return {name, ok: response.ok, data: await response.json()};
+                } catch (error) {
+                    log(name, false, Math.round(performance.now() - started));
+                    return {name, ok: false, data: null};
+                }
+            }));
+
+            const account = results.find((item) => item.name === 'api/account');
+            const messages = results.find((item) => item.name === 'api/messages');
+            const invoices = results.find((item) => item.name === 'billing/invoices');
+            const supportData = results.find((item) => item.name === 'support/summary');
+            const metrics = [];
+
+            if (account && account.data) {
+                metrics.push(['sesión', account.data.account.username]);
+                metrics.push(['métricas', (account.data.metrics || []).length]);
+            }
+            if (messages && messages.data) {
+                metrics.push(['no leídos', messages.data.unread]);
+                metrics.push(['bandeja', (messages.data.inbox || []).length]);
+            }
+            if (invoices && invoices.data) {
+                metrics.push(['facturas', invoices.data.invoices.length]);
+                metrics.push(['pendiente', invoices.data.summary.outstanding + ' EUR']);
+            }
+            if (supportData && supportData.data) {
+                metrics.push(['casos abiertos', supportData.data.metrics.open]);
+            }
+
+            document.getElementById('account-live-metrics').innerHTML = metrics.map(([key, value]) =>
+                '<div class="metric-tile"><span>' + key + '</span><strong>' + value + '</strong></div>'
+            ).join('');
+            document.getElementById('account-live-updated').textContent = new Date().toLocaleTimeString();
+        };
+
+        document.getElementById('refresh-account-live').addEventListener('click', load);
+        load();
+    })();
+</script>
+{% endblock %}

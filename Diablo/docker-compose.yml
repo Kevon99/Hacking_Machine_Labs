@@ -1,0 +1,79 @@
+services:
+  dns_server:
+    image: andyshinn/dnsmasq
+    container_name: lab_dns
+    cap_add:
+      - NET_ADMIN
+    command: >
+      --address=/.trickshot.local/172.20.0.10
+      --server=8.8.8.8
+      --log-queries
+    networks:
+      net_external:
+        ipv4_address: 172.20.0.5
+
+  m1_web:
+    build: ./machines/m1_web
+    container_name: m1_trickshot
+    hostname: trickshot
+    environment:
+      DB_HOST: m1_db
+      DB_PORT: "3306"
+      DB_USER: db_admin
+      DB_PASSWORD: "SuperSecretDBPass123!"
+      DB_NAME: corp_db
+      DB_ROOT_USER: root
+      DB_ROOT_PASSWORD: "rootpassword"
+      SECRET_KEY: "trickshot-lab-session-key"
+      WAF_RATE_LIMIT: "100"
+      WAF_RATE_WINDOW: "60"
+      WAF_RATE_BLOCK_SECONDS: "180"
+      WAF_EXPLOIT_BLOCK_SECONDS: "300"
+    networks:
+      net_external:
+        ipv4_address: 172.20.0.10
+      net_corp:
+        ipv4_address: 172.21.0.10
+    depends_on:
+      m1_db:
+        condition: service_healthy
+
+  m1_db:
+    image: mysql:5.7
+    container_name: m1_database
+    environment:
+      MYSQL_ROOT_PASSWORD: "rootpassword"
+      MYSQL_DATABASE: corp_db
+      MYSQL_USER: db_admin
+      MYSQL_PASSWORD: "SuperSecretDBPass123!"
+    volumes:
+      - ./machines/m1_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      net_corp:
+        ipv4_address: 172.21.0.20
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+networks:
+  net_external:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+  net_corp:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+
+  net_data:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.22.0.0/24

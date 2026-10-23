@@ -1,0 +1,95 @@
+{% extends "public/base.html" %}
+
+{% block title %}Portal de clientes | Trickshot{% endblock %}
+
+{% block content %}
+<section class="section auth-public">
+    <div class="auth-layout">
+        <div class="card auth-card">
+            <div class="eyebrow">Portal de clientes</div>
+            <h1>Iniciar sesión</h1>
+            <p class="muted">Acceda a sus casos, presupuestos y datos de contacto.</p>
+
+            <form method="post" action="{{ url_for('login') }}" class="stack">
+                <label>
+                    Usuario
+                    <input type="text" name="username" autocomplete="username" required>
+                </label>
+                <label>
+                    Contraseña
+                    <input type="password" name="password" autocomplete="current-password" required>
+                </label>
+                <button type="submit" class="primary">Entrar</button>
+            </form>
+
+            <p class="form-note"><a href="{{ url_for('forgot_password') }}">¿Olvidaste tu contraseña?</a> · <a href="{{ url_for('mfa') }}">Verificación MFA</a></p>
+            <p class="form-note">¿No tiene cuenta? <a href="{{ url_for('register') }}">Regístrese aquí</a>.</p>
+            <p class="form-note muted">Cuenta de demostración: <span class="mono">demo / Trickshot2026!</span></p>
+            <p class="form-note muted">Acceso SSO disponible en <a href="{{ sites.auth }}/login">auth.trickshot.local</a>.</p>
+        </div>
+
+        <div class="card side-card">
+            <div class="eyebrow">Acceso seguro</div>
+            <h2>Un único punto para su operación.</h2>
+            <ul class="check-list">
+                <li>Seguimiento de casos y solicitudes.</li>
+                <li>Consulta de presupuestos vigentes.</li>
+                <li>Preferencias de contacto y notificaciones.</li>
+            </ul>
+            <p class="muted">El portal no almacena datos de pago. Para facturación, contacte con su gestor asignado.</p>
+
+            <div class="login-metrics">
+                <div class="section-head">
+                    <h2>Estado del servicio</h2>
+                    <span class="muted" id="metrics-status">consultando...</span>
+                </div>
+                <div class="metric-grid" id="login-metrics"></div>
+                <p class="form-note muted" id="login-api-status">Consultando api.trickshot.local...</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    const metricLabels = {
+        uptime_seconds: 'Uptime',
+        requests_per_minute: 'Req/min',
+        cache_hit_ratio: 'Cache hit',
+        active_workers: 'Workers',
+        queue_depth: 'Cola'
+    };
+
+    fetch('{{ sites.api }}/api/v1/metrics')
+        .then((response) => response.json())
+        .then((data) => {
+            const container = document.getElementById('login-metrics');
+            const status = document.getElementById('metrics-status');
+            Object.entries(metricLabels).forEach(([key, label]) => {
+                let value = data[key];
+                if (key === 'uptime_seconds') {
+                    value = Math.round(Number(value) / 3600) + ' h';
+                } else if (key === 'cache_hit_ratio') {
+                    value = Math.round(Number(value) * 100) + '%';
+                }
+                const tile = document.createElement('div');
+                tile.className = 'metric-tile';
+                tile.innerHTML = '<span>' + label + '</span><strong>' + value + '</strong>';
+                container.appendChild(tile);
+            });
+            status.textContent = 'operativo';
+        })
+        .catch(() => {
+            document.getElementById('metrics-status').textContent = 'degradado';
+        });
+
+    fetch('{{ sites.api }}/api/v1/summary', {cache: 'no-store'})
+        .then((response) => response.json())
+        .then((data) => {
+            document.getElementById('login-api-status').textContent =
+                'API Gateway: ' + data.status + ' · ' + new Date(data.generated_at).toLocaleTimeString();
+        })
+        .catch(() => {
+            document.getElementById('login-api-status').textContent = 'API Gateway: sin conexión';
+        });
+</script>
+{% endblock %}

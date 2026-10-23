@@ -1,0 +1,63 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Panel | Trickshot DB Admin{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">corp_db</div>
+        <h1>Panel de administración</h1>
+        <p class="muted">Resumen operativo del sistema de atención al cliente.</p>
+    </div>
+    <span class="status-dot">Conexión activa</span>
+</div>
+
+<div class="action-grid">
+    <a class="action-card" href="{{ url_for('reports') }}">
+        <span class="action-icon">01</span>
+        <strong>Generar reporte</strong>
+        <small>Exportar métricas y actividad de tickets.</small>
+    </a>
+    <a class="action-card" href="{{ url_for('backup') }}">
+        <span class="action-icon">02</span>
+        <strong>Respaldar datos</strong>
+        <small>Preparar un respaldo para el servidor FTP.</small>
+    </a>
+</div>
+
+<section class="card">
+    <div class="section-head">
+        <h2>Tickets recientes</h2>
+        <span class="muted">{{ tickets|length }} registros</span>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ticket</th>
+                    <th>Asunto</th>
+                    <th>Prioridad</th>
+                    <th>Estado</th>
+                    <th>Creado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td class="mono">{{ ticket.ticket_id }}</td>
+                    <td>{{ ticket.subject }}</td>
+                    <td><span class="badge badge-{{ ticket.priority }}">{{ ticket.priority }}</span></td>
+                    <td><span class="badge badge-{{ ticket.status }}">{{ ticket.status }}</span></td>
+                    <td class="muted">{{ ticket.created_at }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="muted">No hay tickets registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Reportes | Trickshot DB Admin{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">Herramientas</div>
+        <h1>Generador de reportes</h1>
+        <p class="muted">Cree reportes personalizados a partir de la información de tickets.</p>
+    </div>
+</div>
+
+<section class="card narrow-card">
+    <form method="post" action="{{ url_for('reports') }}" class="stack">
+        <label>
+            Nombre del reporte
+            <input type="text" name="report_name" value="monthly" required>
+        </label>
+        <label>
+            Formato de salida
+            <input type="text" name="report_format" value="csv" required>
+        </label>
+        <button type="submit" class="primary">Generar reporte</button>
+    </form>
+</section>
+
+{% if output %}
+<section class="card">
+    <div class="section-head">
+        <h2>Resultado</h2>
+    </div>
+    <pre class="terminal">{{ output }}</pre>
+</section>
+{% endif %}
+{% endblock %}
